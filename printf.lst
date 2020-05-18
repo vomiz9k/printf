@@ -1,0 +1,354 @@
+     1                                  section .code
+     2                                  
+     3                                  global _start 
+     4                                  
+     5                                  _start:
+     6 00000000 4889E5                              mov rbp, rsp
+     7 00000003 4883ED08                            sub rbp, x64
+     8 00000007 68[43050000]                        push string
+     9 0000000C 68E4000000                          push 228d
+    10 00000011 68E4000000                          push 228d
+    11 00000016 68E4000000                          push 228d
+    12 0000001B 68E4000000                          push 228d
+    13 00000020 6A59                                push 'Y'
+    14 00000022 49B8-                               mov r8, format_string
+    14 00000024 [0000000000000000] 
+    15                                        
+    16 0000002C E816000000                          call printf
+    17                                  
+    18 00000031 4829E5                              sub rbp, rsp
+    19 00000034 48C1E503                            shl rbp, 3
+    20 00000038 4889E9                              mov rcx, rbp
+    21 0000003B F35D                                rep pop rbp
+    22                                              
+    23                                              
+    24 0000003D B801000000                          mov rax, 1  
+    25 00000042 4831DB                              xor rbx, rbx
+    26 00000045 CD80                                int 0x80
+    27                                              
+    28                                  ;----------------------------------------
+    29                                  ;Does format output.
+    30                                  ;IN: rbp - pointer on 1st arguement pushed in stack, r8 - format string pointer
+    31                                  ;OUT: no
+    32                                  ;DESTR: no
+    33                                  ;-----------------------------------------     
+    34                                  printf:     
+    35 00000047 9C                                  pushf
+    36 00000048 B9CA000000                          mov rcx, fs_len
+    37 0000004D 4831DB                              xor rbx, rbx
+    38 00000050 4831D2                              xor rdx, rdx
+    39                                              
+    40                                       printf_loop:
+    41 00000053 41803C1825                          cmp byte [r8 + rbx], '%'
+    42 00000058 742C                                je format_call
+    43 0000005A 418A0418                            mov al, byte [r8 + rbx]
+    44 0000005E 8882[CA000000]                      mov byte [buffer + rdx], al
+    45 00000064 48FFC2                              inc rdx
+    46 00000067 48FFC3                              inc rbx
+    47                                      
+    48                                       percent_ret:
+    49 0000006A 4881FA00020000                      cmp  rdx, DROP_LIMIT
+    50 00000071 7205                                jb drop_ret
+    51 00000073 E894010000                          call drop
+    52                                       
+    53                                       
+    54                                       drop_ret:
+    55 00000078 41803C1800                          cmp byte [r8 + rbx], 0h
+    56 0000007D 75D4                                jne printf_loop
+    57                                            
+    58 0000007F E888010000                          call drop
+    59                                              
+    60 00000084 9D                                  popf
+    61 00000085 C3                                  ret
+    62                                  
+    63                                  
+    64                                  format_call:
+    65 00000086 48FFC3                              inc rbx
+    66                                              
+    67 00000089 41803C1873                          cmp byte [r8 + rbx], 's'
+    68 0000008E 7443                                je found_string
+    69                                              
+    70 00000090 41803C1864                          cmp byte [r8 + rbx], 'd'
+    71 00000095 7465                                je found_decimal
+    72                                              
+    73 00000097 41803C1862                          cmp byte [r8 + rbx], 'b'
+    74 0000009C 0F84AE000000                        je found_binary 
+    75                                              
+    76 000000A2 41803C186F                          cmp byte [r8 + rbx], 'o'
+    77 000000A7 0F84C3000000                        je found_octa 
+    78                                              
+    79 000000AD 41803C1878                          cmp byte [r8 + rbx], 'x'
+    80 000000B2 0F84D8000000                        je found_hex
+    81                                              
+    82 000000B8 41803C1863                          cmp byte [r8 + rbx], 'c'
+    83 000000BD 0F84ED000000                        je found_char
+    84                                              
+    85 000000C3 41803C1825                          cmp byte [r8 + rbx], '%'
+    86 000000C8 0F84F7000000                        je found_percent
+    87                                              
+    88 000000CE E904010000                          jmp found_err 
+    89                                             
+    90                                              
+    91                                               
+    92                                      found_string:
+    93 000000D3 E834010000                          call drop
+    94                                                
+    95 000000D8 488B7500                            mov rsi, [rbp]
+    96 000000DC E8A1010000                          call strlen
+    97 000000E1 BF01000000                          mov rdi, 1
+    98 000000E6 B801000000                          mov rax, 1
+    99                                              
+   100 000000EB 0F05                                syscall
+   101                                              
+   102 000000ED 4883ED08                            sub rbp, x64
+   103 000000F1 4831D2                              xor rdx, rdx
+   104 000000F4 48FFC3                              inc rbx
+   105 000000F7 E97CFFFFFF                          jmp drop_ret 
+   106                                                     
+   107                                                     
+   108                                                    
+   109                                      found_decimal:
+   110 000000FC 53                                  push rbx
+   111 000000FD 52                                  push rdx
+   112                                                  
+   113 000000FE 4831C9                              xor rcx, rcx
+   114 00000101 488B4500                            mov rax, [rbp]
+   115 00000105 4883ED08                            sub rbp, x64
+   116 00000109 4831DB                              xor rbx, rbx
+   117                                                  
+   118 0000010C BB0A000000                          mov rbx, 10d    
+   119                                                  
+   120                                            division_loop:  
+   121 00000111 4831D2                              xor rdx, rdx    
+   122 00000114 48F7F3                              div rbx
+   123 00000117 8ABA[0A050000]                      mov bh, byte [alph + rdx]
+   124 0000011D 88B9[CA040000]                      mov byte [integer_buff + rcx], bh
+   125 00000123 30FF                                xor bh, bh
+   126 00000125 48FFC1                              inc rcx
+   127 00000128 4883F800                            cmp rax, 0
+   128 0000012C 77E3                                ja division_loop
+   129                                                  
+   130 0000012E 5A                                  pop rdx
+   131                                              
+   132                                            put_dec_to_buff:      
+   133 0000012F 48FFC9                              dec rcx
+   134 00000132 8A81[CA040000]                      mov al, byte [integer_buff + rcx]
+   135 00000138 8882[CA000000]                      mov byte [buffer + rdx], al
+   136 0000013E 48FFC2                              inc rdx
+   137 00000141 4883F900                            cmp rcx, 0
+   138 00000145 75E8                                jne put_dec_to_buff 
+   139                                               
+   140 00000147 5B                                  pop rbx
+   141 00000148 48FFC3                              inc rbx
+   142 0000014B E91AFFFFFF                          jmp percent_ret
+   143                                              
+   144                                                             
+   145                                                              
+   146                                         found_binary:
+   147 00000150 C682[CA000000]30                    mov byte [buffer + rdx], '0'
+   148 00000157 48FFC2                              inc rdx
+   149 0000015A C682[CA000000]62                    mov byte [buffer + rdx], 'b'
+   150 00000161 48FFC2                              inc rdx
+   151                                              
+   152 00000164 B101                                mov cl, 1
+   153 00000166 E8C1000000                          call bin_print
+   154 0000016B E9FAFEFFFF                          jmp percent_ret
+   155                                              
+   156                                         found_octa:
+   157 00000170 C682[CA000000]30                    mov byte [buffer + rdx], '0'
+   158 00000177 48FFC2                              inc rdx
+   159 0000017A C682[CA000000]6F                    mov byte [buffer + rdx], 'o'
+   160 00000181 48FFC2                              inc rdx
+   161                                              
+   162 00000184 B103                                mov cl, 3
+   163 00000186 E8A1000000                          call bin_print
+   164 0000018B E9DAFEFFFF                          jmp percent_ret
+   165                                              
+   166                                         found_hex:
+   167 00000190 C682[CA000000]30                    mov byte [buffer + rdx], '0'
+   168 00000197 48FFC2                              inc rdx
+   169 0000019A C682[CA000000]78                    mov byte [buffer + rdx], 'x'
+   170 000001A1 48FFC2                              inc rdx
+   171                                               
+   172 000001A4 B104                                mov cl, 4
+   173 000001A6 E881000000                          call bin_print
+   174 000001AB E9BAFEFFFF                          jmp percent_ret
+   175                                              
+   176                                              
+   177                                              
+   178                                         found_char:
+   179 000001B0 488B4500                            mov rax, [rbp]
+   180 000001B4 8882[CA000000]                      mov byte [buffer + rdx], al
+   181 000001BA 48FFC2                              inc rdx
+   182 000001BD 48FFC3                              inc rbx
+   183 000001C0 E9A5FEFFFF                          jmp percent_ret
+   184                                  
+   185                                              
+   186                                                                      
+   187                                         found_percent:
+   188 000001C5 C682[CA000000]25                    mov byte [buffer + rdx], '%'
+   189 000001CC 48FFC2                              inc rdx
+   190 000001CF 48FFC3                              inc rbx
+   191 000001D2 E993FEFFFF                          jmp percent_ret
+   192                                              
+   193                                              
+   194                                              
+   195                                         found_err:
+   196 000001D7 E830000000                          call drop
+   197 000001DC 48BE-                               mov rsi, err_str
+   197 000001DE [1B05000000000000] 
+   198 000001E6 BA27000000                          mov rdx, err_str_len - 1
+   199 000001EB 418A0C18                            mov cl, byte [r8 + rbx]
+   200 000001EF 880C25[40050000]                    mov byte [err_str + err_str_len - 3], cl
+   201 000001F6 BF01000000                          mov rdi, 1
+   202 000001FB B801000000                          mov rax, 1
+   203                                              
+   204 00000200 0F05                                syscall
+   205 00000202 B801000000                          mov rax, 1  
+   206                                             
+   207 00000207 4831DB                              xor rbx, rbx
+   208 0000020A CD80                                int 0x80      
+   209                                              
+   210                                              
+   211                                             
+   212                                  ;----------------------------------------
+   213                                  ;Drops printf buffer to console.
+   214                                  ;IN: rdx - size of buffer
+   215                                  ;OUT: rdx = 0
+   216                                  ;DESTR: rdi = 1, rax = 1
+   217                                  ;-----------------------------------------      
+   218                                  drop:  
+   219 0000020C 4883FA00                            cmp rdx, 0
+   220 00000210 7619                                jbe drop_end
+   221                                  
+   222 00000212 48BE-                               mov rsi, buffer
+   222 00000214 [CA00000000000000] 
+   223                                              
+   224 0000021C BF01000000                          mov rdi, 1
+   225 00000221 B801000000                          mov rax, 1
+   226                                              
+   227 00000226 0F05                                syscall
+   228                                  
+   229 00000228 4831D2                              xor rdx,rdx
+   230                                              
+   231                                       drop_end:
+   232 0000022B C3                                 ret
+   233                                             
+   234                                             
+   235                                        
+   236                                  ;----------------------------------------
+   237                                  ;Prints integer in some binary format.(2^n-format)
+   238                                  ;IN: cl - power of 2
+   239                                  ;OUT: rbp - correct current position in stack.
+   240                                  ;DESTR: rax, rcx
+   241                                  ;-----------------------------------------
+   242                                  bin_print: 
+   243 0000022C B501                                mov ch, 1
+   244 0000022E D2E5                                shl ch, cl
+   245 00000230 80ED01                              sub ch, 1
+   246 00000233 488B4500                            mov rax, [rbp]
+   247 00000237 4883ED08                            sub rbp, 8                 
+   248 0000023B 53                                  push rbx
+   249 0000023C 52                                  push rdx
+   250                                              
+   251                                              
+   252 0000023D 4831D2                              xor rdx, rdx
+   253 00000240 4831DB                              xor rbx, rbx
+   254                                              
+   255                                        bin_print_loop:
+   256 00000243 88C3                                mov bl, al
+   257 00000245 20EB                                and bl, ch            
+   258 00000247 48D3E8                              shr rax, cl   
+   259                                              
+   260 0000024A 8ABB[0A050000]                      mov bh, byte [alph + rbx]       
+   261 00000250 88BA[CA040000]                      mov byte [integer_buff + rdx], bh
+   262 00000256 30FF                                xor bh, bh
+   263                                              
+   264 00000258 48FFC2                              inc rdx
+   265 0000025B 4883F800                            cmp rax, 0h
+   266 0000025F 77E2                                ja bin_print_loop
+   267                                              
+   268 00000261 4889D1                              mov rcx, rdx
+   269 00000264 5A                                  pop rdx
+   270                                              
+   271                                        put_to_buff:
+   272 00000265 48FFC9                              dec rcx
+   273 00000268 8AB9[CA040000]                      mov bh, byte [integer_buff + rcx]
+   274 0000026E 88BA[CA000000]                      mov byte [buffer + rdx], bh 
+   275 00000274 48FFC2                              inc rdx   
+   276 00000277 4883F900                            cmp rcx, 0h
+   277 0000027B 75E8                                jne put_to_buff
+   278                                              
+   279 0000027D 5B                                  pop rbx
+   280 0000027E 48FFC3                              inc rbx
+   281                                              
+   282 00000281 C3                                  ret       
+   283                                              
+   284                                  
+   285                                  ;----------------------------------------
+   286                                  ;Find length of string.
+   287                                  ;IN: rsi - string pointer.
+   288                                  ;OUT: rdx - strlen.
+   289                                  ;DESTR: no
+   290                                  ;-----------------------------------------
+   291                                  strlen:
+   292 00000282 4831D2                              xor rdx, rdx          
+   293                                     strlen_loop:
+   294 00000285 803C1600                            cmp byte [rsi + rdx], 0h
+   295 00000289 7405                                je strlen_end
+   296 0000028B 48FFC2                              inc rdx
+   297 0000028E EBF5                                jmp strlen_loop
+   298                                              
+   299                                      strlen_end:
+   300 00000290 C3                                  ret
+   301                                                       
+   302                                              
+   303                                                                                              
+   304                                  
+   305                                  section     .data
+   306                                  
+   307                                  x64                   equ 8
+   308                                              
+   309 00000000 492062656C69657665-     format_string         db 'I believe that %s I have tested it %d times, this number in other number systems: binary %b, octa %o, hex %x, testing 1 char: %c, here must be percent: %%, and after that must be error with
+   309 00000009 207468617420257320-
+   309 00000012 492068617665207465-
+   309 0000001B 737465642069742025-
+   309 00000024 642074696D65732C20-
+   309 0000002D 74686973206E756D62-
+   309 00000036 657220696E206F7468-
+   309 0000003F 6572206E756D626572-
+   309 00000048 2073797374656D733A-
+   309 00000051 2062696E6172792025-
+   309 0000005A 622C206F6374612025-
+   309 00000063 6F2C20686578202578-
+   309 0000006C 2C2074657374696E67-
+   309 00000075 203120636861723A20-
+   309 0000007E 25632C206865726520-
+   309 00000087 6D7573742062652070-
+   309 00000090 657263656E743A2025-
+   309 00000099 252C20616E64206166-
+   309 000000A2 746572207468617420-
+   309 000000AB 6D7573742062652065-
+   309 000000B4 72726F722077697468-
+   309 000000BD 2073796D626F6C2067-
+   309 000000C6 3A256700           
+   310                                  fs_len                equ $ - format_string
+   311                                  
+   312                                  BUFFER_LEN            equ 400h
+   313                                  DROP_LIMIT            equ BUFFER_LEN / 2
+   314 000000CA 61<rept>                buffer                times BUFFER_LEN db 'a'
+   315                                  
+   316 000004CA 30<rept>                integer_buff          times 64 db '0'
+   317 0000050A 303132333435363738-     alph                  db "0123456789ABCDEF", 0h
+   317 00000513 3941424344454600   
+   318                                  
+   319 0000051B 0A0A4572726F723A20-     err_str               db 0ah, 0ah, "Error: unknown character after %: ", 34d, "c", 34d, 0h
+   319 00000524 756E6B6E6F776E2063-
+   319 0000052D 686172616374657220-
+   319 00000536 616674657220253A20-
+   319 0000053F 22632200           
+   320                                  err_str_len           equ $ - err_str
+   321                                  
+   322 00000543 697420697320776F72-     string                db "it is working!", 0h
+   322 0000054C 6B696E672100       
+   323                                  
