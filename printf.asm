@@ -4,18 +4,8 @@ global _start
 
 _start:
             mov r10, rsp
-            
-            
-            ;push 'A'
-            
-            ;push 228d
-            ;push 228d
-            ;push 228d
-            ;push 228d
-            ;push string
-            
-            ;push format_string
-
+          
+          
             push 127d
             push '!'
             push 100d
@@ -28,9 +18,6 @@ _start:
             push string2
             push format_string2
             
-            ;push 100d
-            ;push format_string3
-            
             
             call printf
             
@@ -41,8 +28,8 @@ _start:
               
 ;----------------------------------------
 ;Does format output.
-;IN: rbp - pointer on 1st arguement pushed in stack
-;OUT: no
+;IN: r10 - pointer on 1st arguement pushed in stack, arguments pushed in stack according to _cdecl. First must be const format/ string.
+;RETURN: Count of written symbols.
 ;DESTR: a lot
 ;-----------------------------------------     
 printf:     
@@ -320,13 +307,17 @@ strlen:
                                                             
 
 section     .data
-percent_jmp_table     dq printf_binary, printf_char, printf_decimal
+percent_jmp_table     dq printf_binary                                  ;%b
+                      times ('c' - 'b' - 1) dq printf_err                        
+                      printf_char,                                      ;%c
+                      times ('d' - 'c' - 1) dq printf_err
+                      printf_decimal                                    ;%d
                       times ('o' - 'd' - 1) dq printf_err
-                      dq printf_octa
+                      dq printf_octa                                    ;%o
                       times ('s' - 'o' - 1) dq printf_err
-                      dq printf_string
+                      dq printf_string                                  ;%s
                       times ('x' - 's' - 1) dq printf_err
-                      dq printf_hex
+                      dq printf_hex                                     ;%x
                       
                    
 BUFFER_LEN            equ 100h
