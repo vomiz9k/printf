@@ -28,14 +28,15 @@ _start:
               
 ;----------------------------------------
 ;Does format output.
-;IN: r10 - pointer on 1st arguement pushed in stack, arguments pushed in stack according to _cdecl. First must be const format/ string.
-;RETURN: Count of written symbols.
-;DESTR: a lot
+;IN: r10 - pointer on 1st arguement pushed in stack, arguments pushed in stack according to stdcall. First must be const char* - format string.
+;RETURN: rax - count of written symbols.
+;DESTR: rax, rbx, rcx, rdx, rsi, rdi, r8, r9, r10, r11
 ;-----------------------------------------     
 printf:     
             pop rbp
             xor rbx, rbx
             xor rdx, rdx
+            xor r11, r11
             pop r8
      printf_loop:
             cmp byte [r8 + rbx], '%'
@@ -61,6 +62,7 @@ printf:
             cmp r10, rsp
             jne stack_clear
             
+            mov rax, r11
             push rbp
             ret
             
@@ -95,6 +97,7 @@ format_call:
             pop rsi
             
             call strlen
+            add r11, rdx
             mov rdi, 1
             mov rax, 1
             
@@ -219,7 +222,8 @@ format_call:
 drop:  
             cmp rdx, 0
             jbe drop_end
-
+            add r11, rdx
+            
             mov rsi, buffer
             
             mov rdi, 1
