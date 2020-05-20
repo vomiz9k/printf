@@ -30,9 +30,9 @@ _start:
               
 ;----------------------------------------
 ;Does format output.
-;IN: r10 - pointer on 1st arguement pushed in stack, arguments pushed in stack according to cdecl. First must be const char* - format string.
+;IN: Arguments pushed in stack according to cdecl. First must be const char* - format string.
 ;RETURN: rax - count of written symbols.
-;DESTR: rax, rbx, rcx, rdx, rsi, rdi, r8, r9, r10, r11
+;DESTR: rax, rbx, rcx, rdx, rsi, rdi, r8, r9, r11
 ;-----------------------------------------     
 printf:     
             pop rbp
