@@ -21,6 +21,8 @@ _start:
             
             call printf
             
+            mov rsp, r10
+            
             mov rax, 1  
             xor rbx, rbx
             int 0x80
@@ -28,7 +30,7 @@ _start:
               
 ;----------------------------------------
 ;Does format output.
-;IN: r10 - pointer on 1st arguement pushed in stack, arguments pushed in stack according to stdcall. First must be const char* - format string.
+;IN: r10 - pointer on 1st arguement pushed in stack, arguments pushed in stack according to cdecl. First must be const char* - format string.
 ;RETURN: rax - count of written symbols.
 ;DESTR: rax, rbx, rcx, rdx, rsi, rdi, r8, r9, r10, r11
 ;-----------------------------------------     
@@ -58,18 +60,10 @@ printf:
           
             call drop
             
-     stackpointer_cmp:
-            cmp r10, rsp
-            jne stack_clear
-            
             mov rax, r11
             push rbp
             ret
             
-     stack_clear:
-            pop rax
-            jmp stackpointer_cmp
-
 
 format_call:
             inc rbx
